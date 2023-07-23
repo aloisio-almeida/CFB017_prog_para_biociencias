@@ -2,27 +2,31 @@
 
 import argparse
 
-parser = argparse.ArgumentParser(description='O EBQMMM visa realizar cálculos de energia de ligação utilizando;teoria quântica/ab initio por meio de cálculos híbridos, com região de intersere sendo tratada com Mecânica Quântica (QM) e o restante do sistema com pontos de carga,derivados de campos de força clássicos')
+parser = argparse.ArgumentParser(description='O EBQMMM visa realizar cálculos de energia de ligação utilizando teoria quântica/ab initio por meio de cálculos híbridos, com região de interesse sendo tratada com Mecânica Quântica (QM) e o restante do sistema com pontos de carga derivados de campos de força clássicos.')
 
-# Adicionar os argumentos posicionais com o método add_argument():
-parser.add_argument('pdb', type=argparse.FileType('r'), help='arquivo PDB')
-parser.add_argument('-rqm', type=int, help='Raio da região QM')
-parser.add_argument('n_resid', type=str, help='resíduo do PDB correspondente ao ligante/molécula de interesse')
-parser.add_argument('name_lig', type=str, help='nome do resíduo do PDB correspondente ao ligante/molécula em estudo')
-parser.add_argument('prefix', type=str, help='prefixo do sistema, uma pasta será criada com esse nome, contendo as pastas (apo), (complex) e (lig), caso não especificado, o prefixo será o nome do pdb')
-parser.add_argument('-sofqm', type=str, help='programa QM utilizado, por padrão será utilizado o Orca (Orca e XTB implementados)')
-parser.add_argument('-noapo', type=str, help='não prepara o sistema apo, útil quando a simulação apo já foi realizada anteriormente e/ou diminuir os cálculos, fazendo apenas Δe = Complex - Lig (não recomendado/testado) (Não implementado)')
-parser.add_argument('-qmMethod', type=str, help='Método (palavras-chave) que serão utilizadas na região QM, por padrão será utilizado ("!B3LYP 6-31G* TightSCF") para programa Orca, por padrão no XTB será utilizado ("GFN2-xTB")')
-parser.add_argument('-dir_work', type=str, help='Diretório que serão gerados arquivos intermediários, logs de programas (ex.: VMD), por padrão utiliza-se (/tmp);')
-parser.add_argument('-dir_save', type=str, help='Diretório que serão salvos os sistemas preparados, por padrão será utilizado o diretório no qual foi executado o programa (""./"")')
-parser.add_argument('-nprocs', type=str, help='Número de processadores que será usado pelo programa QM, padrão')
-parser.add_argument('-maxram', type=str, help='Máximo de memória ram utilizado pelo programa QM, caso o programa aceite, padrão 2GB por núcleo (para o Orca)')
-parser.add_argument('-charge', type=str, help='Carga do ligante/resídio de referência, a carga da proteína será calculada automaticamente. Só é necessário oferecer a carga do ligante, essa será somada a carga do restante da região QM. Atenção: Somente calculamos a carga de aminoácidos da região QM (em breve outras biomoléculas)')
-parser.add_argument('-pointCharge', type=str, help='Adicionar automaticamente os pontos de carga, por padrão eles serão adicionados para proteínas. Para desativar basta -pointCharge off')
-parser.add_argument('-ff', type=str, help='Campo de força de referência para adicionar os pontos de carga, por padrão será utilizado o CHARMM (top_all36_prot) presente em app.forcefild. Somente compatível com FFs CHARMM. Em breve adicionaremos outras biomoléculas e outros FFs')
-parser.add_argument('-cutoff', type=str, help='Adiciona apenas os pontos de cargas dentro do cutoff ao redor da região QM. Padrão: todos os pontos de carga serão adicionados. Ex.: -cutoff 20')
-parser.add_argument('-pathQMSof', type=str, help='Caminho do programa QM que será adicionado ao arquivo de execução dos cálculos QM, esse também pode ser modificado no arquivo .sh presente no diretório com os sistemas')
-parser.add_argument('-pathQMExec', type=str, help='Local de execução dos cálculos QM, esse também pode ser modificado no arquivo .sh presente no diretório com os sistemas')
+# Argumentos posicionais
+parser.add_argument('pdb', type=argparse.FileType('r'), help='Caminho para o arquivo PDB contendo a estrutura molecular.')
+parser.add_argument('n_resid', type=str, help='Resíduo do PDB correspondente ao ligante/molécula de interesse.')
+parser.add_argument('name_lig', type=str, help='Nome do resíduo do PDB correspondente ao ligante/molécula em estudo.')
+parser.add_argument('prefix', type=str, help='Prefixo do sistema. Será criada uma pasta com esse nome contendo as pastas (apo), (complex) e (lig). Caso não especificado, o prefixo será o nome do arquivo PDB.')
 
+# Argumentos opcionais
+parser.add_argument('-rqm', type=int, default=5, help='Raio da região QM (Mecânica Quântica).')
+parser.add_argument('-sofqm', type=str, default='Orca', help='Programa QM utilizado. Opções: "Orca" ou "XTB".')
+parser.add_argument('-noapo', action='store_true', help='Não preparar o sistema apo. Útil quando a simulação apo já foi realizada anteriormente e/ou para diminuir os cálculos, fazendo apenas Δe = Complex - Lig (não recomendado/testado).')
+parser.add_argument('-qmMethod', type=str, default='!B3LYP 6-31G* TightSCF', help='Método (palavras-chave) a ser utilizado na região QM. Por padrão, usa-se "!B3LYP 6-31G* TightSCF" para o programa Orca e "GFN2-xTB" para o XTB.')
+parser.add_argument('-dir_work', type=str, default='/tmp', help='Diretório onde serão gerados arquivos intermediários e logs de programas (ex.: VMD). Por padrão, utiliza-se o diretório /tmp.')
+parser.add_argument('-dir_save', type=str, default='./', help='Diretório onde serão salvos os sistemas preparados. Por padrão, utiliza-se o diretório atual.')
+parser.add_argument('-nprocs', type=int, default=1, help='Número de processadores que será usado pelo programa QM. Padrão: 1.')
+parser.add_argument('-maxram', type=str, default='2GB', help='Máximo de memória RAM utilizado pelo programa QM. Padrão: "2GB".')
+parser.add_argument('-charge', type=int, help='Carga do ligante/resíduo de referência. A carga da proteína será calculada automaticamente. Só é necessário oferecer a carga do ligante, essa será somada à carga do restante da região QM.')
+parser.add_argument('-pointCharge', type=str, default='on', help='Adicionar automaticamente os pontos de carga. Opções: "on" (para proteínas) ou "off".')
+parser.add_argument('-ff', type=str, default='CHARMM', help='Campo de força de referência para adicionar os pontos de carga. Padrão: CHARMM (top_all36_prot) presente em app.forcefild. Somente compatível com FFs CHARMM.')
+parser.add_argument('-cutoff', type=int, help='Adiciona apenas os pontos de carga dentro do cutoff ao redor da região QM. Exemplo: -cutoff 20.')
+parser.add_argument('-optGeo', type=str, default='AM1', help='Realizar otimização da geometria da região QM. Método pode ser indicado (por padrão, usa-se AM1).')
+parser.add_argument('-pathQMSof', type=str, default='', help='Caminho do programa QM que será adicionado ao arquivo de execução dos cálculos QM. Pode ser modificado também no arquivo .sh presente no diretório com os sistemas.')
+parser.add_argument('-pathQMExec', type=str, default='', help='Local de execução dos cálculos QM. Pode ser modificado também no arquivo .sh presente no diretório com os sistemas.')
+parser.add_argument('-multiPrepare', type=str, default='AM1', help='Realizar otimização da geometria da região QM. Método pode ser indicado (por padrão, usa-se AM1).')
 
 args = parser.parse_args()
+
